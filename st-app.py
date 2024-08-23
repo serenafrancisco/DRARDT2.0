@@ -156,20 +156,25 @@ def main():
 
             sasa_out = run_freesasa(gene_name, input_pdb)
 
-            for mutation in mutations:
+            if sasa_out:
+                sasa_df = parse_freesasa_output(sasa_out)
+                st.dataframee(sasa_df)
 
-                pos_wt = int(mutation[1:-1])
-                rsa_value = get_rsa_for_residue(sasa_out, pos_wt)
+                for mutation in mutations:
+                    pos_wt = int(mutation[1:-1])
+                    rsa_value = sasa_df[sasa_df['ResNum'] == pos_wt]['RSA'].values[0] if not sasa_df[sasa_df['ResNum'] == pos_wt].empty else None
 
-                if rsa_value is not None:
-                    ddG = calculate_ddG(mutation, rsa_value, volume_dict, polarity_dict)
-                    st.write(f"**Calculated SimBa-NI ΔΔG for {mutation}:** {ddG}")
-                    if ddG > -1.5:
-                        st.write(f"Mutation {mutation} is not expected to lead to protein unfolding.")
+                    if rsa_value is not None:
+                        ddG = calculate_ddG(mutation, rsa_value, volume_dict, polarity_dict)
+                        st.write(f"**Calculated SimBa-NI ΔΔG for {mutation}:** {ddG}")
+                        if ddG > -1.5:
+                            st.write(f"Mutation {mutation} is not expected to lead to protein unfolding.")
+                        else:
+                            st.write(f"Mutation {mutation} is expected to lead to protein unfolding.")
                     else:
-                        st.write(f"Mutation {mutation} is expected to lead to protein unfolding.")
-                else:
-                    st.write(f"Could not calculate SimBa-NI ΔΔG for {mutation} due to missing RSA value.")
+                        st.write(f"Could not calculate SimBa-NI ΔΔG for {mutation} due to missing RSA value.")
+
+
 
 if __name__ == "__main__":
     main()

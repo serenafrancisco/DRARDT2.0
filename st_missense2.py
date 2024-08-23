@@ -4,6 +4,8 @@ import os
 import csv
 import requests
 from freesasa import *
+import pandas as pd
+import streamlit as st
 
 def load_aa_properties(tsv_file):
     volume_dict = {}
@@ -19,18 +21,7 @@ def load_aa_properties(tsv_file):
     
     return volume_dict, polarity_dict
 
-def run_freesasa(gene_name, input_pdb):
-    """
-    Run the freesasa command with the specified options.
-    Parameters:
-    - gene_name (str): The gene name (not used anymore but kept for consistency).
-    - input_pdb (file-like object): File object for the input PDB file.
-    
-    Returns:
-    - output (str): The output from the freesasa command.
-    """
-    
-    # Create a temporary file to store the PDB contents
+def run_freesasa(input_pdb):
     with tempfile.NamedTemporaryFile(suffix=".pdb", delete=False) as temp_pdb_file:
         temp_pdb_file.write(input_pdb.read())
         temp_pdb_file.flush()  # Ensure all data is written to the file
@@ -45,27 +36,43 @@ def run_freesasa(gene_name, input_pdb):
         ]
         
         try:
-            # Execute the freesasa command and capture output
-            result = subprocess.run(command, capture_output=True, text=True, check=True)
-            output = result.stdout  # Store the command output in a variable
-            print("Freesasa command executed successfully.")
-            print()
+            # Execute the FreeSASA command and capture the output
+            result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            output = result.stdout  # This captures the stdout as a string
+            return output
+        
         except subprocess.CalledProcessError as e:
-            print(f"An error occurred while running freesasa: {e}")
-            output = None
+            st.error(f"An error occurred while running FreeSASA: {e}")
         except FileNotFoundError:
-            print("Freesasa is not installed or not found in your PATH.")
-            output = None
-        finally:
-            # Clean up the temporary PDB file
-            os.remove(temp_pdb_file.name)
+            st.error("FreeSASA is not installed or not found in your PATH.")
     
-    if output:
-        print(f"freesasa output:\n{output[:500]}...")  # Print the first 500 characters for inspection
-    else:
-        print("No output from freesasa.")
+    return None
+
+def parse_freesasa_output(freesasa_output):
+    data = []
+    lines = freesasa_output.splitlines()
     
-    return output
+    # Extract relevant lines starting with "RES"
+    for line in lines:
+        if line.startswith("RES"):
+            columns = line.split()
+            if len(columns) >= 11:
+                data.append({
+                    "Res": columns[2],
+                    "Chain": columns[1],
+                    "ResNum": int(columns[3]),
+                    "Area": float(columns[4]),
+                    "RSA": float(columns[5]),
+                    "Sidechain": float(columns[6]),
+                    "Mainchain": float(columns[7]),
+                    "NonPolar": float(columns[8]),
+                    "AllPolar": float(columns[9]),
+                    "RelTotal": float(columns[10])
+                })
+    
+    # Convert the data to a pandas DataFrame
+    df = pd.DataFrame(data)
+    return df
 
 def get_rsa_for_residue(freesasa_output, residue_number):
     """

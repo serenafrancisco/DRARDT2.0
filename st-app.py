@@ -2,7 +2,7 @@ import streamlit as st
 from Bio import Entrez
 from st_uniprot import *
 from st_params import *
-from st_missense import *
+from st_missense2 import *
 
 def main():
 
@@ -155,7 +155,6 @@ def main():
                     st.write(f"Position {pos_wt} is not covered by any experimental structures of {gene_name}.")
 
             sasa_out = run_freesasa(gene_name, input_pdb)
-            st.write(f"FreeSASA output saved to {sasa_out}")
 
             for mutation in mutations:
 

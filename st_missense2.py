@@ -60,6 +60,11 @@ def run_freesasa(gene_name, input_pdb):
             # Clean up the temporary PDB file
             os.remove(temp_pdb_file.name)
     
+    if output:
+        print(f"freesasa output:\n{output[:500]}...")  # Print the first 500 characters for inspection
+    else:
+        print("No output from freesasa.")
+    
     return output
 
 def get_rsa_for_residue(freesasa_output, residue_number):
